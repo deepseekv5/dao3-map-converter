@@ -1,0 +1,432 @@
+{
+ "info": {
+  "isNeverChangeDisplayName": true,
+  "bannerImages": [],
+  "description": "",
+  "displayName": "Blank Map",
+  "notice": "",
+  "previewImage": ""
+ },
+ "entitiesTree": {
+  "ROOT_ID": {
+   "type": 0,
+   "childrenIds": [],
+   "id": "ROOT_ID",
+   "name": "Root",
+   "parentId": ""
+  }
+ },
+ "player": {
+  "emissive": 0,
+  "metalness": 0,
+  "shininess": 0,
+  "friction": 0,
+  "mass": 1,
+  "restitution": 0,
+  "scale": 1,
+  "crouchAcceleration": 0.09,
+  "crouchSpeed": 0.1,
+  "doubleJumpPower": 0.9,
+  "flyAcceleration": 2,
+  "flySpeed": 2,
+  "initialYaw": 0,
+  "jumpAccelerationFactor": 0.55,
+  "jumpPower": 0.96,
+  "jumpSpeedFactor": 0.85,
+  "runAcceleration": 0.35,
+  "runSpeed": 0.4,
+  "swimAcceleration": 0.1,
+  "swimSpeed": 0.4,
+  "walkAcceleration": 0.19,
+  "walkSpeed": 0.22,
+  "allowAction0": true,
+  "allowAction1": true,
+  "allowCrouch": true,
+  "allowDoubleJump": true,
+  "allowFlight": false,
+  "allowJump": true,
+  "allowMove": true,
+  "invisible": false,
+  "noClip": false,
+  "showIndicator": false,
+  "showName": true,
+  "cameraType": "follow",
+  "color": [
+   1,
+   1,
+   1
+  ],
+  "colorLUT": "",
+  "damage": {
+   "hp": 100,
+   "maxHp": 100,
+   "enabled": false,
+   "showDamage": true,
+   "showHealth": true
+  },
+  "initialPosition": {
+   "x": 64,
+   "y": 140,
+   "z": 64
+  },
+  "movementBounds": {
+   "hi": {
+    "x": 178,
+    "y": 178,
+    "z": 178
+   },
+   "lo": {
+    "x": -50,
+    "y": -50,
+    "z": -50
+   }
+  },
+  "playerSounds": {
+   "action0": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "action1": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "crouch": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "doubleJump": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "endFly": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "enterWater": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "jump": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "land": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "leaveWater": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "music": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "spawn": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "startFly": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "step": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "swim": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   }
+  },
+  "sounds": {
+   "chat": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "die": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "hurt": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   },
+   "interact": {
+    "gain": 1,
+    "gainRange": 0,
+    "pitch": 1,
+    "pitchRange": 0,
+    "radius": 32,
+    "sample": ""
+   }
+  }
+ },
+ "environment": {
+  "drawDistance": 512,
+  "bakedShadow": {
+   "chunkShift": 6,
+   "data": "",
+   "texture": ""
+  },
+  "fog": {
+   "fogDensity": 0,
+   "fogHeightFalloff": 0.8,
+   "fogHeightOffset": -8,
+   "fogStartDistance": 0,
+   "maxFog": 1,
+   "fogColor": {
+    "b": 1,
+    "g": 1,
+    "r": 1
+   }
+  },
+  "rain": {
+   "density": 0,
+   "interference": 0.04,
+   "speed": 1,
+   "color": {
+    "a": 1,
+    "b": 1,
+    "g": 1,
+    "r": 1
+   },
+   "direction": {
+    "x": 0,
+    "y": 1,
+    "z": 0
+   },
+   "size": {
+    "h": 0.5,
+    "w": 0.5
+   }
+  },
+  "sky": {
+   "skyType": 0,
+   "globalLight": 0.3,
+   "lunarPhase": 0,
+   "sunFrequency": 0,
+   "sunPhase": 0.16666666666666666,
+   "gamma": 1.3,
+   "skyBack": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "skyBottom": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "skyFront": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "skyLeft": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "skyRight": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "skyTop": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "sunColor": {
+    "b": 0,
+    "g": 0,
+    "r": 0
+   },
+   "sunDirection": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   }
+  },
+  "snow": {
+   "density": 1,
+   "fallSpeed": 1,
+   "spinSpeed": 0,
+   "color": {
+    "a": 1,
+    "b": 1,
+    "g": 1,
+    "r": 1
+   },
+   "size": {
+    "h": 0,
+    "w": 0
+   },
+   "texture": ""
+  }
+ },
+ "physics": {
+  "gravity": -0.1,
+  "velocityDamping": 0.01,
+  "useOBB": false
+ },
+ "ambientSound": {
+  "ambient": {
+   "gain": 1,
+   "gainRange": 0,
+   "pitch": 1,
+   "pitchRange": 0,
+   "radius": 32,
+   "sample": ""
+  },
+  "breakVoxel": {
+   "gain": 1,
+   "gainRange": 0,
+   "pitch": 1,
+   "pitchRange": 0,
+   "radius": 32,
+   "sample": ""
+  },
+  "placeVoxel": {
+   "gain": 1,
+   "gainRange": 0,
+   "pitch": 1,
+   "pitchRange": 0,
+   "radius": 32,
+   "sample": ""
+  },
+  "playerJoin": {
+   "gain": 1,
+   "gainRange": 0,
+   "pitch": 1,
+   "pitchRange": 0,
+   "radius": 32,
+   "sample": ""
+  },
+  "playerLeave": {
+   "gain": 1,
+   "gainRange": 0,
+   "pitch": 1,
+   "pitchRange": 0,
+   "radius": 32,
+   "sample": ""
+  }
+ },
+ "gamepad": {
+  "buttons": {
+   "actionA": "",
+   "actionB": "",
+   "crouch": "",
+   "jump": ""
+  },
+  "fly": {
+   "button": "",
+   "flyingBackground": "",
+   "flyingController": ""
+  },
+  "joystick": {
+   "background": "",
+   "controller": ""
+  }
+ },
+ "zones": [],
+ "deleteAssets": [],
+ "uiTree": {
+  "ROOT_ID": {
+   "type": 0,
+   "childrenIds": [
+    "DEFAULT_SCREEN_ID"
+   ],
+   "id": "ROOT_ID",
+   "name": "Root",
+   "parentId": ""
+  },
+  "DEFAULT_SCREEN_ID": {
+   "type": 2,
+   "childrenIds": [],
+   "id": "DEFAULT_SCREEN_ID",
+   "name": "screen",
+   "parentId": "ROOT_ID",
+   "value": {
+    "type": "screen",
+    "data": {
+     "zIndex": 1,
+     "enable": true,
+     "layout": {
+      "type": "none",
+      "data": null
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+.run/
+out/
+*.zip
+*.boxproject
+*.boxplay
+产出/

@@ -1,0 +1,121 @@
+# DAO3 地图转换器
+
+把**神岛（DAO3）**导出的地图 `.zip` 转成 **BOX3 Local Engine** 能直接使用的两种格式：
+
+| 产物 | 用途 |
+| --- | --- |
+| `.boxproject` | 导入**创作端**编辑地形、脚本、模型 |
+| `.boxplay` | 放进**游玩库**直接运行 |
+
+不需要 Docker、不需要数据库、不需要平台账号。只需要 Node.js 18+。
+
+## 为什么做这个
+
+神岛平台关闭后，大量老地图的导出包散落各处。这些包有几类问题：
+
+- 格式和官方引擎不兼容（`block.json` vs `config/`）
+- 缺文件（体素、脚本、模型、配置）
+- 引用了已消失的云端资源
+
+这个工具把它们**尽可能还原成可编辑、可游玩的工程**，缺什么会在结果里如实说明，不静默丢数据。
+
+## 快速开始
+
+```bash
+./run.sh                      # 起界面（浏览器打开 http://127.0.0.1:8801/）
+./run.sh 地图.zip              # 命令行直接转
+./run.sh a.zip b.zip          # 批量
+```
+
+产出默认写到 `~/Desktop/DAO3转换产出/`，可改：
+
+```bash
+DAO3_CONV_OUT=~/我的产出 ./run.sh 地图.zip
+```
+
+macOS 可双击 `启动转换器.command`。
+
+## 支持两种导出包
+
+| | 老导出包 | 官方新导出 |
+| --- | --- | --- |
+| 工程信息 | `block.json` + `json/*.json` | `<proj>/config/*.json` + `meta/` |
+| 体素 | `terrain/voxel-sparse.gz` | 同名，zip 根 |
+| 脚本 | `scripts/*.js` | `assets/scripts/{server,client,other}/` |
+| 图片 | `images/<子路径>` | `public/images/` |
+| 音频 | `audio/` | `public/audios/` |
+| 模型 | `meshes/*.vox` | `public/models/<名>/{json,bin,gltf}` |
+
+**地图组**（一个 zip 含多张地图）会自动拆开，逐张产出。
+
+## 转换了什么
+
+- **体素地形** — `voxel-sparse.gz` 或 `terrain/raw` 区块 → 引擎 chunk，方块朝向完整保留
+- **脚本** — 服务端 / 客户端 / 其它，三类全部保留
+- **模型**
+  - 官方 VOXA（`json` + `bin`）→ 原生迁移链路
+  - MagicaVoxel `.vox` → 转成 VOXA 格式（含 z-up→y-up 轴变换）
+  - glTF → 登记并计算包围盒
+- **场景实体** — `json/entities.json` 里的放置物（机关、道具、建筑）→ 引擎实体树
+- **图片 / 音频 / UI / 环境** — 全部保留，含尺寸元数据
+
+## 用法细节
+
+### 导入创作端
+
+1. 启动 BOX3 Local Engine（官方 Docker 部署）
+2. 打开创作端，点「导入工程」
+3. 选 `.boxproject`
+
+### 放进游玩库
+
+```bash
+tar -xzf 地图.boxplay -C /tmp/bp
+mv /tmp/bp/worlds/* <游玩库>/
+```
+
+引擎会把它当成一个世界直接加载。
+
+### 让模型出现在编辑器面板
+
+转换出的模型会进入工程的 `assets`（场景能显示），但编辑器的 Models 面板读的是 **VOXA 本地库**，需要额外同步一次：
+
+```bash
+node push-models.mjs --project <工程目录>            # 自动读取 cloudMapId
+node push-models.mjs --all <游玩库目录>              # 批量
+```
+
+`cloudMapId` 取自原包的 `meta/mapId.txt`，编辑器按它查找模型——这也是为什么转换时要保留原地图 ID。
+
+## 已知限制
+
+- **`.vox` 转 VOXA**：几何正确，材质用 MagicaVoxel 调色板映射；不支持 MagicaVoxel 的高级材质
+- **模型的预览图**：官方导出包里没有预览图字段，无法凭空生成
+- **图片资产**：引擎要求特定元数据形状，转换器会生成；但封面/横幅引用若原包里确实没有图片，会被清空
+- **脚本**：如果原包的玩法逻辑在未导出的 bundle 里（部分包只带 `require('./_server_bundle.js')`），那部分代码不在包内，无法还原
+
+## 依赖
+
+- Node.js 18+（推荐 20 / 22）
+- 系统 `tar`（macOS / Linux 自带）
+- 零 npm 依赖
+
+`runtime/` 里内置了引擎运行时资源（约 22MB），保证产出的工程在编辑器里能启动——不内置的话会报 `Runtime assets are incomplete`。
+
+## 目录
+
+```
+converter/
+├── convert.mjs          核心转换（zip → blob 图 → 工程/游玩包）
+├── server.mjs           本地 Web 服务
+├── run.sh               启动 / 命令行
+├── push-models.mjs      同步模型到 VOXA 库
+├── fix-imported.mjs     修复已导入的旧工程
+├── lib/                 体素编码、图片尺寸、glTF、vox 转换
+├── web/                 界面
+└── runtime/             内置引擎运行时资源
+```
+
+## 许可
+
+MIT。转换产物（.boxproject / .boxplay）的版权归原地图作者所有，本工具只做格式转换。

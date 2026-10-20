@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DAO3 地图转换器 · zip → 官方工程包</title>
+<link rel="stylesheet" href="/app.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1115'/%3E%3Cpath d='M6 16h9m0 0-3.5-3.5M15 16l-3.5 3.5M26 16h-9m0 0 3.5-3.5M17 16l3.5 3.5' stroke='%234f7cff' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 16h9m0 0-3.5-3.5M15 16l-3.5 3.5M26 16h-9m0 0 3.5-3.5M17 16l3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="brand-text">
+      <div class="brand-name">DAO3 转换器</div>
+      <div class="brand-sub">神岛 zip → 官方 .boxproject 工程包</div>
+    </div>
+  </div>
+  <button class="btn ghost small" id="reveal">打开产出文件夹</button>
+</header>
+
+<main class="shell">
+  <section class="hero">
+    <div class="eyebrow">MAP CONVERTER</div>
+    <h1>把旧地图包<br />变成官方能导入的工程</h1>
+    <p class="hero-sub">
+      拖入神岛导出的 zip，得到可直接在创作端「导入工程」的 <code>.boxproject</code>。
+      包内缺文件也能转换，缺的部分会用可重建信息补全并明确告知。
+    </p>
+    <div class="caps">
+      <span class="cap">体素地形</span>
+      <span class="cap">脚本</span>
+      <span class="cap">图片资产</span>
+      <span class="cap">glTF 模型</span>
+      <span class="cap">音频</span>
+      <span class="cap">调色 LUT</span>
+    </div>
+  </section>
+
+  <section class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" accept=".zip" multiple hidden />
+    <div class="dz-inner">
+      <div class="dz-icon">↓</div>
+      <div class="dz-title">拖入 zip 文件</div>
+      <div class="dz-sub">或 <span class="dz-link">点击选择</span> · 可多选，逐个转换</div>
+    </div>
+  </section>
+
+  <section class="queue" id="queue" hidden>
+    <div class="section-head">
+      <h2>转换队列</h2>
+      <span class="count" id="queueCount"></span>
+    </div>
+    <div class="queue-list" id="queueList"></div>
+  </section>
+
+  <section class="outputs">
+    <div class="section-head">
+      <h2>已产出</h2>
+      <span class="count" id="outputCount"></span>
+    </div>
+    <div class="output-list" id="outputList"></div>
+  </section>
+</main>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

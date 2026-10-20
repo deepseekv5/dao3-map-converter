@@ -185,6 +185,18 @@ function fixProject(projectDir, { dryRun = false } = {}) {
     state.extraProjectHash = EMPTY_HASH;
     state.extraProjectMode = '';
   }
+  // cloudMapId：编辑器按它向 VOXA 查模型。老转换器没写这个字段，模型面板因此
+  // 永远是空的。能从工程旁边的 meta/mapId.txt 找到就补上。
+  if (state.cloudMapId === undefined) {
+    const mapIdFile = path.join(projectDir, 'meta', 'mapId.txt');
+    const mapIdText = fs.existsSync(mapIdFile)
+      ? fs.readFileSync(mapIdFile, 'utf8').trim()
+      : '';
+    if (/^\d+$/.test(mapIdText)) {
+      state.cloudMapId = Number(mapIdText);
+      report.cloudMapId = state.cloudMapId;
+    }
+  }
   const readBlobJson = (hash) => JSON.parse(fs.readFileSync(path.join(blobRoot, hash), 'utf8'));
   const perm = readBlobJson(state.permissionHash);
   const vc = readBlobJson(perm.versionControl);

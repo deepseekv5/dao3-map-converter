@@ -87,9 +87,33 @@ node push-models.mjs --all <游玩库目录>              # 批量
 
 `cloudMapId` 取自原包的 `meta/mapId.txt`，编辑器按它查找模型——这也是为什么转换时要保留原地图 ID。
 
+## 质量检查
+
+每次转换后可以验证产物的正确性——检查项对应引擎真实读取路径，不是形式化清单：
+
+```bash
+node verify-output.mjs --all ~/Desktop/DAO3转换产出
+```
+
+覆盖 8 类检查：
+
+| 检查 | 内容 |
+| --- | --- |
+| 归档外壳 | tar.gz 可解、顶层结构符合官方要求 |
+| 文档链自洽 | permission → versionControl → project 全部可达 |
+| 资源完整性 | 文档引用的每个 blob 都存在 |
+| 体素完整性 | chunk 数 = ⌈shape/32⌉ 乘积，逐块存在 |
+| 模型可解析 | VOXA 元数据含 version/bounds/dataHash，dataHash 可读 |
+| 实体引用 | 实体树里的 mesh 路径都在 assets 中 |
+| 运行时资源 | 客户端脚本包 + runtime-blobs.json 齐备 |
+| cloudMapId | 编辑器模型面板可见性 |
+
+实测 20 个导出包、64 个产物（工程包 + 游玩包）全部通过。
+
 ## 已知限制
 
-- **`.vox` 转 VOXA**：几何正确，材质用 MagicaVoxel 调色板映射；不支持 MagicaVoxel 的高级材质
+- **`.vox` 转 VOXA**：几何与调色板正确，会生成标准 `{version,bounds,dataHash}` 元数据；不支持 MagicaVoxel 的高级材质（PBR 参数）
+- **缺失模型**：实体引用了包内没有的模型时，会生成 1×1×1 占位方块并在结果里注明
 - **模型的预览图**：官方导出包里没有预览图字段，无法凭空生成
 - **图片资产**：引擎要求特定元数据形状，转换器会生成；但封面/横幅引用若原包里确实没有图片，会被清空
 - **脚本**：如果原包的玩法逻辑在未导出的 bundle 里（部分包只带 `require('./_server_bundle.js')`），那部分代码不在包内，无法还原
@@ -111,6 +135,7 @@ converter/
 ├── run.sh               启动 / 命令行
 ├── push-models.mjs      同步模型到 VOXA 库
 ├── fix-imported.mjs     修复已导入的旧工程
+├── verify-output.mjs    产物质量检查（结构/自洽性/资源完整性）
 ├── lib/                 体素编码、图片尺寸、glTF、vox 转换
 ├── web/                 界面
 └── runtime/             内置引擎运行时资源

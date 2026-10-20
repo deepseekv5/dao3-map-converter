@@ -716,16 +716,26 @@ export function convertDao3Zip(zipPath, options = {}) {
       const relative = entry.name.match(MODEL_ENTRY)[2];
       const ext = relative.toLowerCase().split('.').pop();
       if (ext === 'vox') {
-        // MagicaVoxel .vox → 官方 VbFileData（type=2 VOXA 链路，key=mesh/<name>.vb）。
-        // 已用官方 parseVbFile 验证产物可解析。
+        // MagicaVoxel .vox → VOXA：(1) VbFileData 作为数据 blob，
+        // (2) {version, bounds, dataHash} 元数据作为 assets 的 hash。
+        // 引擎的 migrateVoxel/getModelMetaData 只认元数据，直接把 VbFileData
+        // 挂在 assets 上会被判为无效模型（缺 version/bounds/dataHash）。
         try {
           const { sizeX, sizeY, sizeZ, voxels, palette } = parseVox(entry.data);
           const base = relative.split('/').pop().replace(/\.vox$/i, '');
           const vb = buildVbFileData(sizeX, sizeY, sizeZ, voxels, palette, base);
-          const hash = storeJSON(vb);
+          const dataHash = storeJSON(vb);
+          // 轴变换后引擎尺寸为 (sizeX, sizeZ, sizeY)
+          const bounds = [sizeX, sizeZ, sizeY];
+          const metaHash = storeJSON({
+            version: 7,
+            bounds,
+            dataHash,
+            motionList: [],
+          });
           assets[`mesh/${base}.vb`] = {
             ownerId: 0, contentId: 0, bounds: [0, 0, 0], animated: false,
-            type: 2, hash, size: entry.data.length, previewImage: '',
+            type: 2, hash: metaHash, size: entry.data.length, previewImage: '',
           };
           voxConverted += 1;
         } catch (error) {
@@ -793,6 +803,36 @@ export function convertDao3Zip(zipPath, options = {}) {
     );
   }
   if (skippedVoxCount) warnings.push(`${skippedVoxCount} 个模型未转换（${voxSkipped.slice(0, 4).join('、')}${voxSkipped.length > 4 ? ' 等' : ''}）`);
+
+  // ---- 实体引用的缺失模型：补占位模型 ----
+  // 老包里偶尔有实体引用了没随包导出的模型（如"单元方块"）。留着悬空引用会让
+  // 引擎在加载实体时取不到 mesh。这里生成一个 1×1×1 的占位体素模型，
+  // 保证实体有几何可挂载，同时在 warnings 里如实说明。
+  if (entitiesDoc && typeof entitiesDoc === 'object') {
+    const missing = new Set();
+    for (const entity of Object.values(entitiesDoc)) {
+      const mesh = entity && typeof entity === 'object' ? entity.mesh : undefined;
+      if (typeof mesh === 'string' && mesh.startsWith('mesh/') && !assets[mesh]) {
+        missing.add(mesh);
+      }
+    }
+    for (const meshPath of missing) {
+      const base = meshPath.replace(/^mesh\//, '').replace(/\.vb$/, '');
+      // 1×1×1 单方块：nx=ny=nz=1，RLE 一个 run（length-1=0, block=1）
+      const vb = buildVbFileData(1, 1, 1, new Map([[0, 1]]), null, base);
+      const dataHash = storeJSON(vb);
+      const metaHash = storeJSON({ version: 7, bounds: [1, 1, 1], dataHash, motionList: [] });
+      assets[meshPath] = {
+        ownerId: 0, contentId: 0, bounds: [0, 0, 0], animated: false,
+        type: 2, hash: metaHash, size: 0, previewImage: '',
+      };
+    }
+    if (missing.size) {
+      warnings.push(
+        `${missing.size} 个实体的模型原包缺失，已生成占位方块（${[...missing].slice(0, 3).join('、')}${missing.size > 3 ? ' 等' : ''}）`,
+      );
+    }
+  }
 
   // ---- 悬空 CID 清理 ----
   // 官方 scanProjectCompatibility 把脚本文本里所有 Qm<44> 子串当资源引用，缺一个就判

@@ -7,7 +7,10 @@
 | `.boxproject` | 导入**创作端**编辑地形、脚本、模型 |
 | `.boxplay` | 放进**游玩库**直接运行 |
 
-不需要 Docker、不需要数据库、不需要平台账号。只需要 Node.js 18+。
+**网页版（无需安装）**：https://deepseekv5.github.io/dao3-map-converter/
+打开就能用，文件全程留在浏览器里，不上传任何服务器。
+
+也可以本地跑：不需要 Docker、不需要数据库、不需要平台账号，只要 Node.js 18+。
 
 ## 为什么做这个
 
@@ -19,7 +22,19 @@
 
 这个工具把它们**尽可能还原成可编辑、可游玩的工程**，缺什么会在结果里如实说明，不静默丢数据。
 
-## 快速开始
+## 两种用法
+
+### 网页版（推荐，零安装）
+
+直接打开 https://deepseekv5.github.io/dao3-map-converter/ ，拖入 zip 即可。
+
+- 全部计算在浏览器里完成（`crypto.subtle` 算哈希、`DecompressionStream` 解压、
+  纯 JS 生成 tar.gz），文件**不会上传**
+- 支持拖拽多选、进度反馈、工程包/游玩包双下载
+- 可外挂 `entitiesTree.json` 补回场景实体
+- 引擎运行时资源内置，产出的工程可直接在创作端打开
+
+### 命令行
 
 ```bash
 ./run.sh                      # 起界面（浏览器打开 http://127.0.0.1:8801/）
@@ -153,7 +168,8 @@ converter/
 ├── fix-imported.mjs     修复已导入的旧工程
 ├── verify-output.mjs    产物质量检查（结构/自洽性/资源完整性）
 ├── lib/                 体素编码、图片尺寸、glTF、vox 转换
-├── web/                 界面
+├── web/                 界面（本地服务版）
+├── web/browser/         网页版（纯静态，GitHub Pages 用）
 └── runtime/             内置引擎运行时资源
 ```
 

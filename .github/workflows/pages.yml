@@ -1,0 +1,68 @@
+name: Build GitHub Pages
+
+# 网页版是纯静态的（HTML + ES modules + 内置 runtime），直接把源文件组装到
+# docs/ 并发布，不需要打包步骤。这样源码改了网页版自动跟着更新。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 组装静态站
+        run: |
+          set -euo pipefail
+          rm -rf site
+          mkdir -p site/lib site/runtime
+          # 页面与浏览器端模块
+          cp web/browser/*.html web/browser/*.css web/browser/*.js \
+             web/browser/*.mjs site/
+          # 共享编码库（浏览器直接 import）
+          cp lib/box-encode.mjs lib/image-size.mjs lib/gltf.mjs lib/vox-to-vb.mjs site/lib/
+          cp lib/defaults.json site/
+          # 内置引擎运行时资源
+          cp runtime/runtime-blobs.json site/runtime/
+          cp -R runtime/blobs site/runtime/blobs
+          touch site/.nojekyll
+
+      - name: 自检
+        run: |
+          set -euo pipefail
+          test -f site/index.html
+          test -f site/convert-browser.mjs
+          test -f site/runtime/runtime-blobs.json
+          test -d site/runtime/blobs
+          count=$(ls site/runtime/blobs | wc -l)
+          echo "runtime blobs: $count"
+          test "$count" -gt 300
+          for f in site/*.mjs site/lib/*.mjs; do
+            node --input-type=module --check < "$f" || { echo "语法错误: $f"; exit 1; }
+          done
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

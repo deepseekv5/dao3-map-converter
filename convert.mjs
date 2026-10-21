@@ -677,6 +677,8 @@ export function convertDao3Zip(zipPath, options = {}) {
   let gltfNotSelfContained = 0;
   let voxaCount = 0;
   let voxConverted = 0;
+  // 只有 VOXA 元数据、没有模型字节的 .vox（原包导出时丢了数据）
+  const metadataOnly = [];
 
   if (isOfficial) {
     // 官方包模型：public/models/<name>/<name>.{json,bin,gltf}
@@ -749,6 +751,23 @@ export function convertDao3Zip(zipPath, options = {}) {
       const relative = entry.name.match(MODEL_ENTRY)[2];
       const ext = relative.toLowerCase().split('.').pop();
       if (ext === 'vox') {
+        // 老导出包里 .vox 有两种截然不同的东西：
+        //   a) MagicaVoxel 二进制（有 "VOX " 魔数）→ 转成 VOXA
+        //   b) VOXA 元数据 JSON（{version, bounds, dataHash}）→ 数据本来就丢了
+        // b 的情况说明导出时只留了索引、没带模型字节，如实报告比报
+        // "不是有效的 MagicaVoxel" 有用得多。
+        const head = entry.data.subarray(0, 4).toString('latin1');
+        if (head !== 'VOX ') {
+          let meta = null;
+          try {
+            const parsed = JSON.parse(entry.data.toString('utf8'));
+            if (parsed && parsed.version && parsed.bounds) meta = parsed;
+          } catch {}
+          if (meta) {
+            metadataOnly.push(relative);
+            continue;
+          }
+        }
         // MagicaVoxel .vox → VOXA：(1) VbFileData 作为数据 blob，
         // (2) {version, bounds, dataHash} 元数据作为 assets 的 hash。
         // 引擎的 migrateVoxel/getModelMetaData 只认元数据，直接把 VbFileData
@@ -841,6 +860,11 @@ export function convertDao3Zip(zipPath, options = {}) {
     );
   }
   if (skippedVoxCount) warnings.push(`${skippedVoxCount} 个模型未转换（${voxSkipped.slice(0, 4).join('、')}${voxSkipped.length > 4 ? ' 等' : ''}）`);
+  if (metadataOnly.length) {
+    warnings.push(
+      `${metadataOnly.length} 个模型只有索引没有数据（原包导出时未带模型字节，如 ${metadataOnly.slice(0, 3).join('、')}${metadataOnly.length > 3 ? ' 等' : ''}）——这些模型无法还原`,
+    );
+  }
 
   // ---- 实体引用的缺失模型：补占位模型 ----
   // 老包里偶尔有实体引用了没随包导出的模型（如"单元方块"）。留着悬空引用会让

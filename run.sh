@@ -17,29 +17,42 @@ log() { printf '\033[36m▸\033[0m %s\n' "$*"; }
 fail() { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 # 命令行模式：./run.sh a.zip b.zip
+#   --entities <entitiesTree.json>  外挂实体树（精简导出包缺 entitiesTree 时用）
 if [ "$#" -gt 0 ] && [ "${1:-}" != "stop" ] && [ "${1:-}" != "start" ]; then
   command -v node >/dev/null || fail "需要 Node.js 18+"
+  ENTITIES=""
+  ZIPS=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --entities) ENTITIES="${2:-}"; shift 2 ;;
+      *) ZIPS+=("$1"); shift ;;
+    esac
+  done
+  [ "${#ZIPS[@]}" -gt 0 ] || fail "没有指定 zip 文件"
+  [ -z "$ENTITIES" ] || [ -f "$ENTITIES" ] || fail "entitiesTree 文件不存在：$ENTITIES"
   mkdir -p "$OUT"
-  for zip in "$@"; do
+  for zip in "${ZIPS[@]}"; do
     [ -f "$zip" ] || { echo "跳过（不存在）：$zip"; continue; }
     log "转换 $(basename "$zip") …"
     node --input-type=module -e "
       import { convertZipToBoxProjects } from '$CONVERTER/convert.mjs';
       const zipPath = process.argv[1];
       const outDir = process.argv[2];
+      const entitiesTreePath = process.argv[3] || undefined;
       // 单包与地图组共用一条路径：一次产出 .boxproject（可编辑）+ .boxplay（可直接运行）
-      const { isGroup, projects } = convertZipToBoxProjects(zipPath, { outDir, sourceName: zipPath });
+      const { isGroup, projects } = convertZipToBoxProjects(zipPath, { outDir, sourceName: zipPath, entitiesTreePath });
       if (isGroup) console.log('  检测到地图组：' + projects.length + ' 个地图');
       for (const { result, built, play } of projects) {
         console.log('  ✓ 工程 ' + built.filename + '  (' + (built.size/1024/1024).toFixed(1) + ' MB)');
         if (play) console.log('  ✓ 游玩 ' + play.filename + '  (' + (play.size/1024/1024).toFixed(1) + ' MB)');
         console.log('    尺寸 ' + built.mapSize.x + '×' + built.mapSize.y + '×' + built.mapSize.z +
                     ' · 体素 ' + result.voxelCount.toLocaleString() +
+                    ' · 模型 ' + result.meshCount +
                     ' · blob ' + result.blobs.size +
                     ' · 脚本 ' + (result.scriptNames.length || '无'));
         for (const w of result.warnings) console.log('    · ' + w);
       }
-    " "$zip" "$OUT"
+    " "$zip" "$OUT" "$ENTITIES"
   done
   log "产出目录：$OUT"
   exit 0

@@ -226,6 +226,22 @@ const ENTITY_VALUE_KEYS = new Set([
   'particle', 'damage', 'sound',
 ]);
 
+// 判断一个对象是不是已经是 MuRDATree 形态（有 ROOT_ID 或节点带 type+parentId）。
+// 与扁平 entities.json 区分：扁平版本每个值是实体属性（有 mesh/position），
+// 没有 type/parentId/childrenIds 三件套。
+export function isEntitiesTree(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (value.ROOT_ID) return true;
+  const entries = Object.values(value).filter((v) => v && typeof v === 'object');
+  if (!entries.length) return false;
+  return entries.every(
+    (node) =>
+      typeof node.type === 'number' &&
+      typeof node.parentId === 'string' &&
+      Array.isArray(node.childrenIds),
+  );
+}
+
 export function buildEntitiesTree(entitiesJson) {
   const tree = {
     ROOT_ID: { type: 0, childrenIds: [], id: 'ROOT_ID', name: 'Root', parentId: '' },
@@ -522,9 +538,22 @@ export function convertDao3Zip(zipPath, options = {}) {
   const uiTreeDoc = readJsonUnder('uiTree');
   const gamepadDoc = readJsonUnder('gamepad');
   const deleteAssetsDoc = readJsonUnder('deleteAssets');
-  // 场景实体：老包在 json/entities.json（扁平字典），官方新包不导出实体。
-  // 没有它，放置的模型/机关全部消失，地图只剩地形——直接决定"可游玩"。
-  const entitiesDoc = readJsonUnder('entities');
+  // 场景实体：两种来源
+  //   a) 老包 json/entities.json —— 扁平字典 {id: {name, mesh, position...}}
+  //   b) 完整导出 / 外挂 json/entitiesTree.json —— 已是 MuRDATree
+  //      {id: {id, type, name, parentId, childrenIds, value:{...}}}
+  // 没有实体，放置的模型/机关全部消失，地图只剩地形——直接决定"可游玩"。
+  let entitiesDoc = readJsonUnder('entities');
+  let entitiesTreeDoc = readJsonUnder('entitiesTree');
+  // 允许从外部指定实体树文件（有些导出工具把 entitiesTree 单独存放）
+  if (!entitiesTreeDoc && options.entitiesTreePath && fs.existsSync(options.entitiesTreePath)) {
+    try {
+      const external = JSON.parse(fs.readFileSync(options.entitiesTreePath, 'utf8'));
+      if (isEntitiesTree(external)) entitiesTreeDoc = external;
+    } catch (error) {
+      warnings.push(`外部 entitiesTree 读取失败：${error.message}`);
+    }
+  }
 
   // 配置文档里的 previewImage / bannerImages / texture 之类字段写成 "<cid>.png"。
   // 老导出包常不带这些图片实体，但有时带了、只是文件名与 CID 无关联。
@@ -701,10 +730,14 @@ export function convertDao3Zip(zipPath, options = {}) {
           if (!info.selfContained) gltfNotSelfContained += 1;
           const gltfHash = storeBlob(parts.gltf.data);
           const metadataHash = storeJSON({ bounds: bounds.bounds });
-          assets[`gltf/${name}`] = {
+          const officialGltfEntry = {
             ownerId: 0, contentId: 0, bounds: [0, 0, 0], animated: false,
             type: 9, hash: gltfHash, metadataHash, size: parts.gltf.data.length, previewImage: '',
           };
+          assets[`gltf/${name}`] = officialGltfEntry;
+          // 脚本按 mesh/<名字>.vb 查找模型的包，也需要这个别名
+          const officialMeshAlias = `mesh/${name}.vb`;
+          if (!assets[officialMeshAlias]) assets[officialMeshAlias] = { ...officialGltfEntry };
           gltfCount += 1;
           gltfBytes += parts.gltf.data.length;
         }
@@ -756,9 +789,11 @@ export function convertDao3Zip(zipPath, options = {}) {
         const hash = storeBlob(entry.data);
         // bake 的 getMeshInfo 会 retrieveContentFromS3(hash) 读这个 { bounds } 文档
         const metadataHash = storeBlob(Buffer.from(JSON.stringify({ bounds: bounds.bounds }), 'utf8'));
-        // glTF 的权威 key 是 gltf/<name>（无扩展名，见 asset-controller 的 format 表）
+        // glTF 的权威 key 是 gltf/<name>（无扩展名，见 asset-controller 的 format 表）。
+        // 但脚本/实体是按 mesh/<名字>.vb 查找的（如赛车模版里的 mesh/汽车模板-1.vb），
+        // 所以同一个模型再挂一个 mesh/ 别名，两套查找都能命中。
         const gltfName = relative.split('/').pop().replace(/\.(gltf|glb)$/i, '');
-        assets[`gltf/${gltfName}`] = {
+        const gltfEntry = {
           ownerId: 0,
           contentId: 0,
           bounds: [0, 0, 0],
@@ -769,6 +804,9 @@ export function convertDao3Zip(zipPath, options = {}) {
           size: entry.data.length,
           previewImage: '',
         };
+        assets[`gltf/${gltfName}`] = gltfEntry;
+        const meshAlias = `mesh/${gltfName}.vb`;
+        if (!assets[meshAlias]) assets[meshAlias] = { ...gltfEntry };
         gltfCount += 1;
         gltfBytes += entry.data.length;
         continue;
@@ -886,11 +924,13 @@ export function convertDao3Zip(zipPath, options = {}) {
   // 老平台作者没改地图名时 info.displayName 是 "Project" 这类泛默认名，
   // 用户认的是 zip 文件名（如 神岛世界大厅.zip）——此时优先用文件名。
   const GENERIC_NAMES = new Set(['project', 'untitled', 'new map', 'blank map', '新作品', '未命名', '无标题']);
-  const zipDisplayBase = zipBaseName.replace(/[-_ ]?master[-_ ]?export$/i, '').trim();
+  const zipDisplayBase = zipBaseName.replace(/[-_ ]?master[-_ ]?export$/i, '').replace(/\s+/g, ' ').trim();
+  // 地图名可能带前导空格（如 "    新赛车模版"），统一折叠空白再 trim
+  const cleanedDisplayName = rawDisplayName.replace(/\s+/g, ' ').trim();
   const displayName =
-    rawDisplayName && !GENERIC_NAMES.has(rawDisplayName.trim().toLowerCase())
-      ? rawDisplayName
-      : zipDisplayBase || rawDisplayName || zipBaseName || '未命名地图';
+    cleanedDisplayName && !GENERIC_NAMES.has(cleanedDisplayName.toLowerCase())
+      ? cleanedDisplayName
+      : zipDisplayBase || cleanedDisplayName || zipBaseName || '未命名地图';
 
   const projectDoc = {
     type: 'project',
@@ -910,7 +950,15 @@ export function convertDao3Zip(zipPath, options = {}) {
     deleteAssets: storeJSON(neutralizeDocCids(deleteAssetsDoc ?? [], 'deleteAssets')),
     uiTree: storeJSON(uiTreeDoc || DEFAULTS.uiTree || DEFAULT_UI_TREE),
     info: storeJSON(neutralizeDocCids({ ...DEFAULTS.info, ...(info || {}), displayName }, 'info')),
-    entitiesTree: storeJSON(entitiesDoc ? buildEntitiesTree(entitiesDoc) : (DEFAULTS.entitiesTree || { ROOT_ID: { type: 0, childrenIds: [], id: 'ROOT_ID', name: 'Root', parentId: '' } })),
+    entitiesTree: storeJSON(
+      entitiesTreeDoc
+        ? entitiesTreeDoc
+        : entitiesDoc
+          ? buildEntitiesTree(entitiesDoc)
+          : (DEFAULTS.entitiesTree || {
+              ROOT_ID: { type: 0, childrenIds: [], id: 'ROOT_ID', name: 'Root', parentId: '' },
+            }),
+    ),
     player: storeJSON(neutralizeDocCids({ ...DEFAULTS.player, ...(player || {}) }, 'player')),
     environment: storeJSON(neutralizeDocCids({ ...DEFAULTS.environment, ...(environment || {}) }, 'environment')),
     physics: storeJSON(neutralizeDocCids({ ...DEFAULTS.physics, ...(physics || {}) }, 'physics')),
@@ -966,7 +1014,29 @@ export function convertDao3Zip(zipPath, options = {}) {
   // cloudMapId：编辑器运行时会读它（launcher 的 readCloudMapId）来决定向 VOXA
   // 查模型时用哪个 mapId。写上原包的云地图 ID，模型才能按原 ID 关联到本工程；
   // 不写则退回 '0'，VOXA 库里按该 ID 登记的模型就查不到。
-  const cloudMapId = readTextUnder('meta/mapId.txt');
+  // 三种来源：官方包的 meta/mapId.txt、精简导出包的 project/map.json、
+  // 以及 export-manifest.json 里的 map.id。
+  let cloudMapId = readTextUnder('meta/mapId.txt');
+  if (!cloudMapId) {
+    const mapJsonEntry = files.find((e) => /(^|\/)project\/map\.json$/i.test(e.name));
+    if (mapJsonEntry) {
+      try {
+        const parsed = JSON.parse(mapJsonEntry.data.toString('utf8'));
+        if (Number.isSafeInteger(parsed?.id) && parsed.id > 0) cloudMapId = String(parsed.id);
+      } catch {}
+    }
+  }
+  if (!cloudMapId) {
+    const manifestEntry = files.find((e) => /(^|\/)export-manifest\.json$/i.test(e.name));
+    if (manifestEntry) {
+      try {
+        const parsed = JSON.parse(manifestEntry.data.toString('utf8'));
+        if (Number.isSafeInteger(parsed?.map?.id) && parsed.map.id > 0) {
+          cloudMapId = String(parsed.map.id);
+        }
+      } catch {}
+    }
+  }
   const state = { formatVersion: 1, permissionHash, extraProjectHash };
   if (cloudMapId && /^\d+$/.test(cloudMapId)) {
     state.cloudMapId = Number(cloudMapId);
@@ -1256,7 +1326,7 @@ export function buildBoxPlay(result, options = {}) {
 // CLI / 服务端 / 界面共用这一条路径，避免各处重复探测逻辑。
 // 返回 { projects: [{ projectRoot, result, built, play }], isGroup }。
 export function convertZipToBoxProjects(zipPath, options = {}) {
-  const { outDir, sourceName = zipPath, formats = ['boxproject', 'boxplay'] } = options;
+  const { outDir, sourceName = zipPath, formats = ['boxproject', 'boxplay'], entitiesTreePath } = options;
   const wantProject = formats.includes('boxproject');
   const wantPlay = formats.includes('boxplay');
   const entries = readZipEntries(fs.readFileSync(zipPath)).filter((e) => !e.dir && e.data);
@@ -1269,7 +1339,7 @@ export function convertZipToBoxProjects(zipPath, options = {}) {
 
   // 单项目（老格式，或官方单地图）：走一次即可
   if (projects.length <= 1) {
-    const result = convertDao3Zip(zipPath, { sourceName, projectRoot: projects[0] });
+    const result = convertDao3Zip(zipPath, { sourceName, projectRoot: projects[0], entitiesTreePath });
     return {
       isGroup: false,
       projects: [{ projectRoot: projects[0] || '', result, ...buildOne(result) }],
@@ -1280,7 +1350,7 @@ export function convertZipToBoxProjects(zipPath, options = {}) {
   // 这是官方导入端的设计（每个工程自带完整闭包），不做跨包去重。
   const built = [];
   for (const projectRoot of projects) {
-    const result = convertDao3Zip(zipPath, { sourceName, projectRoot });
+    const result = convertDao3Zip(zipPath, { sourceName, projectRoot, entitiesTreePath });
     built.push({ projectRoot, result, ...buildOne(result) });
   }
   return { isGroup: true, projects: built };

@@ -48,6 +48,10 @@ macOS 可双击 `启动转换器.command`。
 
 **地图组**（一个 zip 含多张地图）会自动拆开，逐张产出。
 
+还支持一种精简导出格式：`project/project.json` + `build/voxel-sparse.gz` +
+`code/*.js` + `models/*.gltf`。这种包通常缺配置文档和实体树，转换器会从
+`export-manifest.json` / `project/map.json` 取地图 ID，并用 `--entities` 补实体。
+
 ## 转换了什么
 
 - **体素地形** — `voxel-sparse.gz` 或 `terrain/raw` 区块 → 引擎 chunk，方块朝向完整保留
@@ -66,6 +70,18 @@ macOS 可双击 `启动转换器.command`。
 1. 启动 BOX3 Local Engine（官方 Docker 部署）
 2. 打开创作端，点「导入工程」
 3. 选 `.boxproject`
+
+### 补回丢失的场景实体
+
+有些导出工具只导模型和地形，把场景里摆放的物件（`entitiesTree`）单独存成文件。
+这时用 `--entities` 指定它，即可把位置、朝向、物理参数全部接回来：
+
+```bash
+./run.sh --entities /path/to/entitiesTree.json 地图.zip
+```
+
+判断方法：打开 `.boxproject` 的实体树，若实体数为 0 而原地图里明明摆了很多东西，
+就是这个情况。实体树里的 `mesh` 路径与转换出的模型 key 一致时才能对应上。
 
 ### 放进游玩库
 
